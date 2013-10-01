@@ -74,6 +74,7 @@ A magic byte at the bottom of the stack is checked to see where to jump when the
 #define ENABLE_WRITE_WHEN_TOLD
 #define ENABLE_LED_BLINK
 #define ENABLE_RESTORE_OSCCAL
+#define ENABLE_BTN_ACTIVATION
 
 // timeout settings
 
@@ -484,17 +485,36 @@ __attribute__((naked))	__attribute__((noreturn))	extern	int	main ( void )
 	// this must saved before interrupts are enabled, because of when calibrateOscillator is called
 	#endif
 
+	#ifdef ENABLE_BTN_ACTIVATION
+	// activation button is connected to D-
+	// this pin has an external pull-up resistor, making it easier to use
+	// this has the advantage of forcing a USB disconnect
+	_delay_ms(10); // wait for settle
+	if (bit_is_clear(USBIN, USBMINUS))
+	{
+	#endif
+
 	#ifdef ENABLE_LED_BLINK
-	DDRB |= _BV(LED_PIN); 
+	DDRB |= _BV(LED_PIN);
 	TCCR0A = _BV(COM0B1) | _BV(WGM01) | _BV(WGM00); // sets PWM for LED fading
 	TCCR0B = 0x1;
 	#endif
 
+	#ifdef ENABLE_BTN_ACTIVATION
+	// must wait until button is released so that the USB bus is free
+	while (bit_is_clear(USBIN, USBMINUS)) {
+	#ifdef ENABLE_LED_BLINK
+	LED_BLINK();
+	#endif
+	}
+	#else
 	// start USB and force a re-enumeration by faking a disconnect
-	usbInit();
 	usbDeviceDisconnect();
 	_delay_ms(200);
+	#endif
+
 	usbDeviceConnect();
+	usbInit();
 	sei();
 
 	// main program loop
@@ -543,6 +563,7 @@ __attribute__((naked))	__attribute__((noreturn))	extern	int	main ( void )
 			#elif (F_CPU == 12000000)
 			_delay_us(25);
 			#endif
+			#ifndef ENABLE_BTN_ACTIVATION
 			idle_cnt++;
 			idle_cnt2 = idle_cnt == 0 ? idle_cnt2 + 1 : idle_cnt2;
 			if (
@@ -558,6 +579,7 @@ __attribute__((naked))	__attribute__((noreturn))	extern	int	main ( void )
 				// timed out
 				break;
 			}
+			#endif
 		}
 	}
 
@@ -600,6 +622,11 @@ __attribute__((naked))	__attribute__((noreturn))	extern	int	main ( void )
 		}
 		finalize_flash_if_dirty();
 	}
+
+	#ifdef ENABLE_BTN_ACTIVATION
+	}
+	#endif
+
 
 	// clear magic word from bottom of stack before jumping to the app
 	*(uint8_t*)(RAMEND)		= 0x00;

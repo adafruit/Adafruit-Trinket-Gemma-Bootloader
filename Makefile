@@ -32,8 +32,8 @@ DEVICE = attiny85
 # BOOTLOADER_ADDRESS must be a multiple of SPM_PAGESIZE, which is 64 for the ATtiny85
 # see table on the bottom of this makefile
 # Note: the compiler used was AVR-GCC 4.7.2 , other versions may change the bootloader size
-BOOTLOADER_ADDRESS_HV = 1500
-BOOTLOADER_ADDRESS_LV = 14C0
+BOOTLOADER_ADDRESS_HV = 1580
+BOOTLOADER_ADDRESS_LV = 1580
 
 PROGRAMMER = -c usbtiny -B 1
 # PROGRAMMER contains AVRDUDE options to address your programmer
@@ -131,7 +131,7 @@ boot_hv.elf:	$(OBJECTS_BOOT_HV)
 	avr-objdump -x -D -S -z $@ > $@.lss
 
 jump_lv.elf:	jump.asm
-	avr-as -mmcu=$(DEVICE) --defsym BOOTLOADER_ADDRESS=0x$(BOOTLOADER_ADDRESS_LV) -o $@ $<
+	avr-as -mmcu=$(DEVICE) --defsym BOOTLOADER_ADDRESS=0x$(BOOTLOADER_ADDRESS_LV) --defsym LOW_VOLTAGE=0x01 -o $@ $<
 
 jump_hv.elf:	jump.asm
 	avr-as -mmcu=$(DEVICE) --defsym BOOTLOADER_ADDRESS=0x$(BOOTLOADER_ADDRESS_HV) -o $@ $<
@@ -149,13 +149,13 @@ boot_hv.hex:	boot_hv.elf
 jump_lv.hex:	jump_lv.elf
 	rm -f $@ $@.tmp jump_lv.eep.hex
 	avr-objcopy -j .text -j .data -O ihex $< $@.tmp
-	head -1 $@.tmp > $@
+	head -n -1 $@.tmp > $@
 	rm -f $@.tmp
 
 jump_hv.hex:	jump_hv.elf
 	rm -f $@ $@.tmp jump_hv.eep.hex
 	avr-objcopy -j .text -j .data -O ihex $< $@.tmp
-	head -1 $@.tmp > $@
+	head -n -1 $@.tmp > $@
 	rm -f $@.tmp
 
 # program size lookup table

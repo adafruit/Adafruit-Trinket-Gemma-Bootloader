@@ -22,10 +22,18 @@
 ; License along with GemmaBoot. If not, see
 ; <http://www.gnu.org/licenses/>.
 
+.ifdef LOW_VOLTAGE
+.EQU BOOTLOADER_START,   0x15e8
+.EQU BOOTLOADER_USB_ISR, 0x169c
+.else
+.EQU BOOTLOADER_START,   0x15e8
+.EQU BOOTLOADER_USB_ISR, 0x168e
+.endif
+
 .org 0x0000
-		rjmp BOOTLOADER_ADDRESS
+		rjmp BOOTLOADER_START
 		rjmp BOOTLOADER_ADDRESS + 2
-		rjmp BOOTLOADER_ADDRESS + 4
+		rjmp BOOTLOADER_USB_ISR
 		rjmp BOOTLOADER_ADDRESS + 6
 		rjmp BOOTLOADER_ADDRESS + 8
 		rjmp BOOTLOADER_ADDRESS + 10
@@ -34,3 +42,7 @@
 		rjmp BOOTLOADER_ADDRESS + 16
 main:	cli
 		rjmp .-2
+
+.org BOOTLOADER_ADDRESS - 4
+		rjmp BOOTLOADER_USB_ISR
+		rjmp BOOTLOADER_START
